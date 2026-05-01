@@ -27,8 +27,12 @@ async function sendMessage() {
     });
 
     const data = await res.json();
+    console.log(data); // 🔥 DEBUG
+
     document.getElementById('typing').style.display = 'none';
-    appendMessage('bot', data.reply);
+
+    // 🔥 FIXED LINE (IMPORTANT)
+    appendMessage('bot', data.reply || data.error || "No response");
 }
 
 function appendMessage(role, text) {
