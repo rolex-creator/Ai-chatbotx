@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>AI Chatbot</title>
+</head>
+<body>
+    <nav>
+        <h2 id="bot-name-display">Loading...</h2>
+        <div>
+            <button onclick="toggleAuth()">Login/Signup</button>
+            <a href="/admin.html" style="color:white; margin-left:10px;">Admin</a>
+        </div>
+    </nav>
+
+    <div id="chat-container">
+        <div id="messages"></div>
+        <div id="typing" style="display:none">Bot is typing...</div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Type a message...">
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="clearChat()">Clear</button>
+    </div>
+
+    <div id="auth-modal" style="display:none" class="modal">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="pass" placeholder="Password">
+        <button onclick="handleAuth('login')">Login</button>
+        <button onclick="handleAuth('signup')">Signup</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
