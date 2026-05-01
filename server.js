@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -11,6 +12,11 @@ app.use(express.json());
 app.use(express.static('public'));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// --- ROOT TEST ---
+app.get("/", (req, res) => {
+  res.send("Backend is running 🚀");
+});
 
 // --- MODELS ---
 const User = mongoose.model('User', new mongoose.Schema({
@@ -56,42 +62,49 @@ app.post('/api/login', async (req, res) => {
     } else { res.status(400).send('Invalid Credentials'); }
 });
 
-// --- CHAT LOGIC ---
+// --- SETTINGS ---
 app.get('/api/settings', async (req, res) => {
     let s = await Settings.findOne();
     if (!s) s = await Settings.create({ botName: 'Pratik-AI' });
     res.json(s);
 });
 
+// --- CHAT ---
 app.post('/api/chat', async (req, res) => {
-    const { message, token } = req.body;
-    let userId = 'guest';
+    try {
+        const { message, token } = req.body;
+        let userId = 'guest';
 
-    if (token) {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        userId = decoded.id;
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            userId = decoded.id;
+        }
+
+        if (message.toLowerCase().includes('who made you') || message.toLowerCase().includes('developer')) {
+            return res.json({ reply: "I was created by Pratik" });
+        }
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: message }],
+        });
+
+        const aiReply = response.choices[0].message.content;
+
+        if (userId !== 'guest') {
+            await Chat.create({ userId, role: 'user', content: message });
+            await Chat.create({ userId, role: 'assistant', content: aiReply });
+        }
+
+        res.json({ reply: aiReply });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Chat error" });
     }
-
-    if (message.toLowerCase().includes('who made you') || message.toLowerCase().includes('developer')) {
-        return res.json({ reply: "I was created by Pratik" });
-    }
-
-    const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: message }],
-    });
-
-    const aiReply = response.choices[0].message.content;
-
-    if (userId !== 'guest') {
-        await Chat.create({ userId, role: 'user', content: message });
-        await Chat.create({ userId, role: 'assistant', content: aiReply });
-    }
-
-    res.json({ reply: aiReply });
 });
 
-// --- ADMIN ROUTES ---
+// --- ADMIN ---
 app.post('/api/admin/login', (req, res) => {
     if (req.body.email === process.env.ADMIN_EMAIL && req.body.password === process.env.ADMIN_PASSWORD) {
         const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET);
@@ -115,6 +128,7 @@ app.delete('/api/admin/user/:id', async (req, res) => {
     res.send("Deleted");
 });
 
+// --- SERVER START ---
 const PORT = process.env.PORT || 3000;
 
 mongoose.connect(process.env.MONGO_URI)
