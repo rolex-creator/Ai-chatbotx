@@ -17,22 +17,35 @@ async function sendMessage() {
     input.value = '';
     document.getElementById('typing').style.display = 'block';
 
-    const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            message: text, 
-            token: localStorage.getItem('token') 
-        })
-    });
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                message: text, 
+                token: localStorage.getItem('token') 
+            })
+        });
 
-    const data = await res.json();
-    console.log(data); // 🔥 DEBUG
+        const data = await res.json();
+        console.log("API Response:", data);
 
-    document.getElementById('typing').style.display = 'none';
+        document.getElementById('typing').style.display = 'none';
 
-    // 🔥 FIXED LINE (IMPORTANT)
-    appendMessage('bot', data.reply || data.error || "No response");
+        // ✅ SAFE RESPONSE FIX
+        if (data.reply) {
+            appendMessage('bot', data.reply);
+        } else if (data.error) {
+            appendMessage('bot', "⚠️ " + data.error);
+        } else {
+            appendMessage('bot', "❌ No response from AI");
+        }
+
+    } catch (err) {
+        console.error("Fetch error:", err);
+        document.getElementById('typing').style.display = 'none';
+        appendMessage('bot', "⚠️ Server error");
+    }
 }
 
 function appendMessage(role, text) {
@@ -43,7 +56,9 @@ function appendMessage(role, text) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-function clearChat() { messagesDiv.innerHTML = ''; }
+function clearChat() { 
+    messagesDiv.innerHTML = ''; 
+}
 
 function toggleAuth() {
     const m = document.getElementById('auth-modal');
@@ -53,18 +68,27 @@ function toggleAuth() {
 async function handleAuth(type) {
     const email = document.getElementById('email').value;
     const password = document.getElementById('pass').value;
-    const res = await fetch(`/api/${type}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (data.token) {
-        localStorage.setItem('token', data.token);
-        alert("Logged in!");
-        toggleAuth();
-    } else {
-        alert(data.message || "Success! Now Login.");
+
+    try {
+        const res = await fetch(`/api/${type}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (data.token) {
+            localStorage.setItem('token', data.token);
+            alert("Logged in!");
+            toggleAuth();
+        } else {
+            alert(data.message || "Success! Now Login.");
+        }
+
+    } catch (err) {
+        console.error("Auth error:", err);
+        alert("Server error");
     }
 }
 
